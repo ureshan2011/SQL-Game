@@ -135,10 +135,9 @@
     <!-- Brand Bar -->
     <div class="brandbar">
       <div class="brand-left">
-        <img id="brandLogoImg" alt="Institution logo" />
-        <div class="brand-name" id="brandInstitutionText">Institution</div>
+        <div class="brand-name" id="brandInstitutionText">Yoobee Colleges</div>
       </div>
-      <div class="brand-right">Created by <span class="nm" id="brandInstructorText">Instructor</span></div>
+      <div class="brand-right">Created by <span class="nm" id="brandInstructorText">Dr. Yasas Wickramasinghe</span></div>
     </div>
 
     <header>
@@ -175,35 +174,6 @@
         <button id="save" class="ghost small">Save</button>
       </div>
     </section>
-
-    <!-- Branding Settings -->
-    <section class="panel">
-      <h2>Branding</h2>
-      <div class="grid cols-3">
-        <div>
-          <div class="label">Institution name</div>
-          <input id="brandInstitution" type="text" placeholder="e.g., Yoobee College of Creative Innovation" style="width:100%" />
-        </div>
-        <div>
-          <div class="label">Instructor name</div>
-          <input id="brandInstructor" type="text" placeholder="Your name" style="width:100%" />
-        </div>
-        <div>
-          <div class="label">Show on Big Question overlay</div>
-          <label class="small"><input id="brandShowOverlay" type="checkbox" checked /> Show branding on overlay</label>
-        </div>
-      </div>
-      <div class="foot" style="margin-top:10px">
-        <div>
-          <div class="label">Logo file</div>
-          <input id="brandLogo" type="file" accept="image/*" />
-        </div>
-        <div class="spacer"></div>
-        <div class="label">Preview</div>
-        <img id="brandLogoPreview" alt="Logo preview" style="height:40px;display:none;border-radius:2px;background:#0f1530;padding:2px 4px;border:1px solid #2a386d"/>
-      </div>
-    </section>
-
     <!-- Big Question + Timer -->
     <section class="panel grid cols-2">
       <div class="panel" style="background:#0c1335">
@@ -292,8 +262,8 @@
     questions:[],
     qIndex:-1,
     brand:{
-      institution:'Yoobee College of Creative Innovation',
-      instructor:'',
+      institution:'Yoobee Colleges',
+      instructor:'Dr. Yasas Wickramasinghe',
       showOnOverlay:true,
       logo:''
     }
@@ -337,12 +307,6 @@
     loadSample: document.getElementById('loadSample'),
     clearBank: document.getElementById('clearBank'),
     // branding
-    brandInstitution: document.getElementById('brandInstitution'),
-    brandInstructor: document.getElementById('brandInstructor'),
-    brandShowOverlay: document.getElementById('brandShowOverlay'),
-    brandLogo: document.getElementById('brandLogo'),
-    brandLogoPreview: document.getElementById('brandLogoPreview'),
-    brandLogoImg: document.getElementById('brandLogoImg'),
     brandInstitutionText: document.getElementById('brandInstitutionText'),
     brandInstructorText: document.getElementById('brandInstructorText'),
     overlayBrand: document.getElementById('overlayBrand'),
@@ -367,6 +331,12 @@
       if(Array.isArray(data.teams)){state.teams=data.teams}
       if(Array.isArray(data.questions)){state.questions=data.questions}
       if(typeof data.qIndex === 'number'){state.qIndex=data.qIndex}
+      // brand is hardcoded; ignore saved brand
+    }catch(e){}
+  });
+      if(Array.isArray(data.teams)){state.teams=data.teams}
+      if(Array.isArray(data.questions)){state.questions=data.questions}
+      if(typeof data.qIndex === 'number'){state.qIndex=data.qIndex}
       if(data.brand){ state.brand = Object.assign(state.brand, data.brand); }
     }catch(e){}
   }
@@ -375,15 +345,15 @@
   if(state.questions.length===0){ state.questions = sampleQuestions(); state.qIndex=0; save(); }
 
   function renderBrand(){
-    // header bar
-    els.brandInstitutionText.textContent = state.brand.institution || 'Institution';
-    els.brandInstructorText.textContent = state.brand.instructor || 'Instructor';
-    if(state.brand.logo){
-      els.brandLogoImg.src = state.brand.logo;
-      els.brandLogoImg.style.display = 'block';
-      els.brandLogoPreview.src = state.brand.logo;
-      els.brandLogoPreview.style.display = 'block';
-    }else{
+    // Hardcoded branding
+    if(els.brandInstitutionText) els.brandInstitutionText.textContent = state.brand.institution;
+    if(els.brandInstructorText) els.brandInstructorText.textContent = state.brand.instructor;
+    // overlay
+    els.overlayBrand.style.display = state.brand.showOnOverlay? 'flex' : 'none';
+    els.overlayCredit.style.display = state.brand.showOnOverlay? 'block' : 'none';
+    els.overlayBrandText.textContent = state.brand.institution;
+    els.overlayCreditName.textContent = state.brand.instructor;
+  }else{
       els.brandLogoImg.removeAttribute('src');
       els.brandLogoImg.style.display = 'none';
       els.brandLogoPreview.removeAttribute('src');
@@ -842,19 +812,6 @@ Question: Say the titles that match (max 3).`,
   if(els.olPrev) els.olPrev.addEventListener('click', prevQ);
   if(els.olNext) els.olNext.addEventListener('click', nextQ);
   if(els.olShowAns) els.olShowAns.addEventListener('click', ()=> toggleAnswer());
-
-  // Branding events
-  if(els.brandInstitution){ els.brandInstitution.addEventListener('input', (e)=>{ state.brand.institution = e.target.value; save(); renderBrand(); }); }
-  if(els.brandInstructor){ els.brandInstructor.addEventListener('input', (e)=>{ state.brand.instructor = e.target.value; save(); renderBrand(); }); }
-  if(els.brandShowOverlay){ els.brandShowOverlay.addEventListener('change', (e)=>{ state.brand.showOnOverlay = !!e.target.checked; save(); renderBrand(); }); }
-  if(els.brandLogo){
-    els.brandLogo.addEventListener('change', (e)=>{
-      const file = e.target.files?.[0]; if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{ state.brand.logo = ev.target.result; save(); renderBrand(); };
-      reader.readAsDataURL(file);
-    });
-  }
 
   // Init render
   render();
