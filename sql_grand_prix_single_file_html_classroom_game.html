@@ -8,11 +8,11 @@
   :root{
     --lane-h: 80px;
     --track-pad: 16px;
-    --finish-w: 18px;
+    --finish-w: 18px; /* used by JS to compute car travel */
     --bg:#0b1020; --panel:#151b34; --muted:#64748b; --text:#e5e7eb; --accent:#22d3ee;
   }
   html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b1020,#0e1430);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:14px;max-width:1200px;margin:0 auto;padding:16px}
+  .app{display:grid;grid-template-rows:auto auto auto 1fr auto;gap:14px;max-width:1200px;margin:0 auto;padding:16px}
   h1{font-size:28px;margin:12px 0 4px}
   .subtitle{color:#9aa4b2;font-size:14px;margin-bottom:6px}
   .panel{background:var(--panel);border:1px solid #1f2647;border-radius:16px;padding:12px}
@@ -20,6 +20,14 @@
   .grid{display:grid;gap:12px}
   .grid.cols-2{grid-template-columns: 1.2fr .8fr}
   .grid.cols-3{grid-template-columns: repeat(3,1fr)}
+
+  /* BRANDING */
+  .brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0f1530;border:1px solid #25305c;border-radius:12px;padding:10px 12px}
+  .brand-left{display:flex;align-items:center;gap:10px}
+  #brandLogoImg{height:38px;display:none}
+  .brand-name{font-weight:700;color:#e7ebff}
+  .brand-right{font-size:14px;color:#a8b5e0}
+  .brand-right .nm{font-weight:700;color:#e7ebff}
 
   /* Scoreboard */
   .teams{display:grid;grid-template-columns: repeat(4,1fr);gap:10px}
@@ -46,7 +54,7 @@
     );
     box-shadow:inset 1px 0 0 rgba(0,0,0,.5)
   }
-  .car{position:absolute;left:0;transform:translateX(0%);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .car{position:absolute;left:0;transform:translateX(0px);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
   .car svg{height:54px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
   .lane-label{position:absolute;left:8px;top:6px;font-size:12px;color:#9db1ff}
 
@@ -66,7 +74,7 @@
   /* Footer controls */
   .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .spacer{flex:1}
-  input[type="text"], input[type="number"]{background:#0d1538;color:#e7ebff;border:1px solid #2a386d;border-radius:10px;padding:8px 10px}
+  input[type="text"], input[type="number"], input[type="checkbox"]{background:#0d1538;color:#e7ebff;border:1px solid #2a386d;border-radius:10px;padding:8px 10px}
   .label{font-size:12px;color:#a8b5e0}
 
   /* Overlay for big-question & winner */
@@ -102,6 +110,18 @@
   body.pseudo-fullscreen .app{max-width:100vw;padding:6px}
   body.pseudo-fullscreen .overlay .card{max-width:96vw}
 
+  /* Overlay branding */
+  .overlay-brand{position:absolute;top:16px;left:16px;display:flex;align-items:center;gap:10px;opacity:.95}
+  .overlay-brand img{height:36px;border-radius:2px;background:#0f1530;padding:2px 4px}
+  .overlay-brand .inst{font-weight:700;color:#e7ebff}
+  .overlay-credit{position:absolute;right:16px;bottom:16px;color:#a8b5e0;background:#0f1530;border:1px solid #2a386d;border-radius:10px;padding:6px 10px}
+  .overlay-credit .nm{color:#e7ebff;font-weight:700}
+
+  /* Overlay controls */
+  .overlay-controls{display:flex;gap:10px;justify-content:center;margin-top:14px}
+  .overlay-answer{margin-top:10px;font-size:28px;color:#86efac;background:#0f2a19;border:1px solid #245d3f;border-radius:12px;padding:10px 14px;display:none}
+  .large{font-size:18px;padding:10px 14px}
+
   @media (max-width: 960px){
     .grid.cols-2{grid-template-columns: 1fr}
     .teams{grid-template-columns: repeat(2,1fr)}
@@ -112,6 +132,15 @@
 </head>
 <body>
   <div class="app">
+    <!-- Brand Bar -->
+    <div class="brandbar">
+      <div class="brand-left">
+        <img id="brandLogoImg" alt="Institution logo" />
+        <div class="brand-name" id="brandInstitutionText">Institution</div>
+      </div>
+      <div class="brand-right">Created by <span class="nm" id="brandInstructorText">Instructor</span></div>
+    </div>
+
     <header>
       <h1>SQL Grand Prix <span class="subtitle">— Inter‑Campus Race</span></h1>
       <div class="subtitle">Use the buttons to award/penalise teams as students answer SQL questions. Press <span class="kbd">F</span> for fullscreen, <span class="kbd">Q</span> to show/hide the Big Question screen, <span class="kbd">Z</span> to Undo.</div>
@@ -144,6 +173,34 @@
         <button id="undo" class="ghost small">Undo (Z)</button>
         <button id="reset" class="danger small">Reset Race</button>
         <button id="save" class="ghost small">Save</button>
+      </div>
+    </section>
+
+    <!-- Branding Settings -->
+    <section class="panel">
+      <h2>Branding</h2>
+      <div class="grid cols-3">
+        <div>
+          <div class="label">Institution name</div>
+          <input id="brandInstitution" type="text" placeholder="e.g., Yoobee College of Creative Innovation" style="width:100%" />
+        </div>
+        <div>
+          <div class="label">Instructor name</div>
+          <input id="brandInstructor" type="text" placeholder="Your name" style="width:100%" />
+        </div>
+        <div>
+          <div class="label">Show on Big Question overlay</div>
+          <label class="small"><input id="brandShowOverlay" type="checkbox" checked /> Show branding on overlay</label>
+        </div>
+      </div>
+      <div class="foot" style="margin-top:10px">
+        <div>
+          <div class="label">Logo file</div>
+          <input id="brandLogo" type="file" accept="image/*" />
+        </div>
+        <div class="spacer"></div>
+        <div class="label">Preview</div>
+        <img id="brandLogoPreview" alt="Logo preview" style="height:40px;display:none;border-radius:2px;background:#0f1530;padding:2px 4px;border:1px solid #2a386d"/>
       </div>
     </section>
 
@@ -196,7 +253,18 @@
       <h3 id="overlayTitle">Round</h3>
       <img id="overlayImg" alt="" style="max-width:100%;max-height:60vh;border-radius:12px;display:none;margin:12px auto 6px;"/>
       <p id="overlayBody">Question will appear here…</p>
+      <div class="overlay-controls">
+        <button id="olPrev" class="ghost large">◀ Prev (←)</button>
+        <button id="olShowAns" class="success large">Show Answer (A)</button>
+        <button id="olNext" class="accent large">Next (→)</button>
+      </div>
+      <div id="overlayAnswer" class="overlay-answer"></div>
     </div>
+    <div class="overlay-brand" id="overlayBrand" style="display:none">
+      <img id="overlayBrandImg" alt="logo"/>
+      <span class="inst" id="overlayBrandText"></span>
+    </div>
+    <div class="overlay-credit" id="overlayCredit" style="display:none">Created by <span class="nm" id="overlayCreditName"></span></div>
   </div>
 
   <div class="overlay" id="winner">
@@ -223,6 +291,12 @@
     history:[],
     questions:[],
     qIndex:-1,
+    brand:{
+      institution:'Yoobee College of Creative Innovation',
+      instructor:'',
+      showOnOverlay:true,
+      logo:''
+    }
   };
 
   const els = {
@@ -262,6 +336,25 @@
     overlayImg: document.getElementById('overlayImg'),
     loadSample: document.getElementById('loadSample'),
     clearBank: document.getElementById('clearBank'),
+    // branding
+    brandInstitution: document.getElementById('brandInstitution'),
+    brandInstructor: document.getElementById('brandInstructor'),
+    brandShowOverlay: document.getElementById('brandShowOverlay'),
+    brandLogo: document.getElementById('brandLogo'),
+    brandLogoPreview: document.getElementById('brandLogoPreview'),
+    brandLogoImg: document.getElementById('brandLogoImg'),
+    brandInstitutionText: document.getElementById('brandInstitutionText'),
+    brandInstructorText: document.getElementById('brandInstructorText'),
+    overlayBrand: document.getElementById('overlayBrand'),
+    overlayBrandImg: document.getElementById('overlayBrandImg'),
+    overlayBrandText: document.getElementById('overlayBrandText'),
+    overlayCredit: document.getElementById('overlayCredit'),
+    overlayCreditName: document.getElementById('overlayCreditName'),
+    // overlay controls
+    olPrev: document.getElementById('olPrev'),
+    olNext: document.getElementById('olNext'),
+    olShowAns: document.getElementById('olShowAns'),
+    overlayAnswer: document.getElementById('overlayAnswer'),
   };
 
   // Persistence
@@ -274,11 +367,41 @@
       if(Array.isArray(data.teams)){state.teams=data.teams}
       if(Array.isArray(data.questions)){state.questions=data.questions}
       if(typeof data.qIndex === 'number'){state.qIndex=data.qIndex}
+      if(data.brand){ state.brand = Object.assign(state.brand, data.brand); }
     }catch(e){}
   }
 
-  // If empty, preload sample SELECT questions
+  // If empty, preload sample SELECT questions (with answers)
   if(state.questions.length===0){ state.questions = sampleQuestions(); state.qIndex=0; save(); }
+
+  function renderBrand(){
+    // header bar
+    els.brandInstitutionText.textContent = state.brand.institution || 'Institution';
+    els.brandInstructorText.textContent = state.brand.instructor || 'Instructor';
+    if(state.brand.logo){
+      els.brandLogoImg.src = state.brand.logo;
+      els.brandLogoImg.style.display = 'block';
+      els.brandLogoPreview.src = state.brand.logo;
+      els.brandLogoPreview.style.display = 'block';
+    }else{
+      els.brandLogoImg.removeAttribute('src');
+      els.brandLogoImg.style.display = 'none';
+      els.brandLogoPreview.removeAttribute('src');
+      els.brandLogoPreview.style.display = 'none';
+    }
+    // overlay
+    const show = !!state.brand.showOnOverlay;
+    els.overlayBrand.style.display = show? 'flex' : 'none';
+    els.overlayCredit.style.display = show? 'block' : 'none';
+    els.overlayBrandText.textContent = state.brand.institution || '';
+    els.overlayCreditName.textContent = state.brand.instructor || '';
+    if(state.brand.logo){ els.overlayBrandImg.src = state.brand.logo; } else { els.overlayBrandImg.removeAttribute('src'); }
+
+    // bind inputs if present
+    if(els.brandInstitution && els.brandInstitution.value !== state.brand.institution) els.brandInstitution.value = state.brand.institution;
+    if(els.brandInstructor && els.brandInstructor.value !== state.brand.instructor) els.brandInstructor.value = state.brand.instructor;
+    if(els.brandShowOverlay) els.brandShowOverlay.checked = !!state.brand.showOnOverlay;
+  }
 
   // Render Scoreboard & Track
   function render(){
@@ -307,7 +430,6 @@
       label.textContent = (t.name||t.id);
       const car = document.createElement('div');
       car.className = 'car';
-      car.style.transform = `translateX(${t.pct}%)`;
       car.innerHTML = carSvg(t.color);
       lane.appendChild(label);
       lane.appendChild(car);
@@ -331,6 +453,8 @@
       </div>`
     }).join('');
     renderBank();
+    renderBrand();
+    positionCars();
   }
 
   function carSvg(color){
@@ -380,6 +504,12 @@
     }
   }
 
+  function showWinner(name){
+    els.winnerText.textContent = `🏁 ${name} wins!`;
+    els.winner.classList.add('show');
+  }
+  if(els.closeWinner){ els.closeWinner.addEventListener('click', ()=> els.winner.classList.remove('show')); }
+
   function burstConfetti(){
     const box = els.confetti; box.innerHTML='';
     const colors = ['#f87171','#60a5fa','#34d399','#fbbf24','#a78bfa','#f472b6'];
@@ -400,9 +530,29 @@
       step:state.step,
       teams:state.teams,
       questions:state.questions,
-      qIndex:state.qIndex
+      qIndex:state.qIndex,
+      brand:state.brand
     }));
   }
+
+  // ===== Car positioning so 100% crosses finish =====
+  function positionCars(){
+    const rootStyles = getComputedStyle(document.documentElement);
+    const finishW = parseFloat(rootStyles.getPropertyValue('--finish-w')) || 18;
+    els.track.querySelectorAll('.lane').forEach(lane=>{
+      const car = lane.querySelector('.car'); if(!car) return;
+      const lw = lane.clientWidth;
+      const cw = car.getBoundingClientRect().width || 120;
+      // At 100% we want the car's nose to pass into the finish stripe area.
+      const crossFudge = finishW * 0.6; // how far into the stripe it should go
+      const maxX = Math.max(0, lw - finishW - cw + crossFudge);
+      const team = state.teams.find(t=>t.id===lane.dataset.id);
+      const pct = team? clamp(team.pct,0,100) : 0;
+      const x = Math.round(maxX * (pct/100));
+      car.style.transform = `translateX(${x}px)`;
+    });
+  }
+  window.addEventListener('resize', positionCars);
 
   function sampleQuestions(){
     return [
@@ -421,7 +571,8 @@ SELECT name
 FROM Students
 WHERE id = 1;
 
-Question: Say the single name returned.`
+Question: Say the single name returned.`,
+        answer: 'Alice'
       },
       {
         title: "HR Duo",
@@ -438,7 +589,8 @@ SELECT name
 FROM Employees
 WHERE dept = 'HR';
 
-Question: Say the two names (any order).`
+Question: Say the two names (any order).`,
+        answer: 'Cara; Dan'
       },
       {
         title: "Under $20",
@@ -455,7 +607,8 @@ SELECT title
 FROM Products
 WHERE price < 20;
 
-Question: Say the titles under $20 (max 3).`
+Question: Say the titles under $20 (max 3).`,
+        answer: 'Charger; Pen Set; Notebook'
       },
       {
         title: "Christchurch?",
@@ -472,7 +625,8 @@ SELECT name
 FROM Customers
 WHERE city = 'Christchurch';
 
-Question: Say the single name returned.`
+Question: Say the single name returned.`,
+        answer: 'Deepak'
       },
       {
         title: "Year 2021",
@@ -489,7 +643,8 @@ SELECT title
 FROM Movies
 WHERE year = 2021;
 
-Question: Say the titles from 2021 (max 2).`
+Question: Say the titles from 2021 (max 2).`,
+        answer: 'Beacon; Cascade'
       },
       // Medium (still SELECT + WHERE)
       {
@@ -508,7 +663,8 @@ SELECT name
 FROM Employees
 WHERE dept = 'IT' AND salary >= 90000;
 
-Question: Say the single name returned.`
+Question: Say the single name returned.`,
+        answer: 'Dan'
       },
       {
         title: "Jan ≤ 100",
@@ -526,9 +682,10 @@ SELECT date
 FROM Sales
 WHERE date >= '2025-01-05' AND date <= '2025-01-10' AND amount <= 100;
 
-Question: Say the dates that match (max 3).`
+Question: Say the dates that match (max 3).`,
+        answer: '2025-01-05; 2025-01-07; 2025-01-08; 2025-01-10'
       },
-      // Tricky (but still BEGINNER scope: SELECT + WHERE + AND/OR)
+      // Tricky (still SELECT + WHERE + AND/OR)
       {
         title: "Sales/IT ≥ 80K",
         text: `Schema: Employees(id INT, name TEXT, dept TEXT, salary INT)
@@ -546,7 +703,8 @@ SELECT name
 FROM Employees
 WHERE (dept = 'Sales' OR dept = 'IT') AND salary >= 80000;
 
-Question: Say up to three names that match.`
+Question: Say up to three names that match.`,
+        answer: 'Ben; Dan; Eve; Fox'
       },
       {
         title: "IDs 2,5,7",
@@ -566,7 +724,8 @@ SELECT name
 FROM Students
 WHERE id = 2 OR id = 5 OR id = 7;
 
-Question: Say the three names (any order).`
+Question: Say the three names (any order).`,
+        answer: 'Bob; Eric; Gina'
       },
       {
         title: "Tech 20+",
@@ -583,7 +742,8 @@ SELECT title
 FROM Products
 WHERE category = 'Tech' AND price >= 20;
 
-Question: Say the titles that match (max 3).`
+Question: Say the titles that match (max 3).`,
+        answer: 'Wireless Mouse; USB-C Cable'
       }
     ];
   }
@@ -619,7 +779,8 @@ Question: Say the titles that match (max 3).`
     const title = els.qTitle.value.trim();
     const text = els.qText.value.trim();
     const image = (els.qPreview && els.qPreview.style.display!=='none' && els.qPreview.src)? els.qPreview.src : '';
-    return {title, text, image};
+    const existingAns = state.questions[state.qIndex]?.answer || '';
+    return {title, text, image, answer: existingAns};
   }
 
   if(els.bankList){
@@ -647,7 +808,7 @@ Question: Say the titles that match (max 3).`
     els.saveToBank.addEventListener('click', ()=>{
       const q = collectForm();
       if(!q.title && !q.text && !q.image){ alert('Add a title/text or image first.'); return; }
-      if(state.qIndex>=0){ state.questions[state.qIndex] = q; }
+      if(state.qIndex>=0){ state.questions[state.qIndex] = {...state.questions[state.qIndex], ...q}; }
       else {
         if(state.questions.length>=10){ alert('Limit of 10 questions reached. Delete one to add more.'); return; }
         state.questions.push(q); state.qIndex = state.questions.length-1;
@@ -666,11 +827,34 @@ Question: Say the titles that match (max 3).`
       if(state.qIndex>=0) loadQuestion(state.qIndex); else clearForm();
     });
   }
-  if(els.prevQuestion){ els.prevQuestion.addEventListener('click', ()=>{ if(!state.questions.length) return; const i = (state.qIndex>0? state.qIndex-1 : state.questions.length-1); loadQuestion(i); }); }
-  if(els.nextQuestion){ els.nextQuestion.addEventListener('click', ()=>{ if(!state.questions.length) return; const i = (state.qIndex+1) % state.questions.length; loadQuestion(i); }); }
+  function prevQ(){ if(!state.questions.length) return; const i = (state.qIndex>0? state.qIndex-1 : state.questions.length-1); loadQuestion(i); ensureOverlay(true); }
+  function nextQ(){ if(!state.questions.length) return; const i = (state.qIndex+1) % state.questions.length; loadQuestion(i); ensureOverlay(true); }
+  if(els.prevQuestion){ els.prevQuestion.addEventListener('click', ()=>{ prevQ(); }); }
+  if(els.nextQuestion){ els.nextQuestion.addEventListener('click', ()=>{ nextQ(); }); }
   if(els.showCurrent){ els.showCurrent.addEventListener('click', ()=>{ ensureOverlay(); }); }
   if(els.toggleOverlay){ els.toggleOverlay.addEventListener('click', toggleOverlay); }
-  if(els.overlay){ els.overlay.addEventListener('click', toggleOverlay); }
+  if(els.overlay){
+    // close only when clicking backdrop, not inside card
+    els.overlay.addEventListener('click', (e)=>{ if(e.target === els.overlay) toggleOverlay(); });
+  }
+
+  // Overlay buttons
+  if(els.olPrev) els.olPrev.addEventListener('click', prevQ);
+  if(els.olNext) els.olNext.addEventListener('click', nextQ);
+  if(els.olShowAns) els.olShowAns.addEventListener('click', ()=> toggleAnswer());
+
+  // Branding events
+  if(els.brandInstitution){ els.brandInstitution.addEventListener('input', (e)=>{ state.brand.institution = e.target.value; save(); renderBrand(); }); }
+  if(els.brandInstructor){ els.brandInstructor.addEventListener('input', (e)=>{ state.brand.instructor = e.target.value; save(); renderBrand(); }); }
+  if(els.brandShowOverlay){ els.brandShowOverlay.addEventListener('change', (e)=>{ state.brand.showOnOverlay = !!e.target.checked; save(); renderBrand(); }); }
+  if(els.brandLogo){
+    els.brandLogo.addEventListener('change', (e)=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ state.brand.logo = ev.target.result; save(); renderBrand(); };
+      reader.readAsDataURL(file);
+    });
+  }
 
   // Init render
   render();
@@ -702,35 +886,48 @@ Question: Say the titles that match (max 3).`
     state.teams = snap.teams; save(); render();
   }
   document.addEventListener('keydown', (e)=>{
-    const k = e.key.toLowerCase();
-    if(k==='n'){
-      if(state.questions.length){ const i = (state.qIndex+1) % state.questions.length; loadQuestion(i); }
-      ensureOverlay();
+    const k = e.key;
+    if(k==='n' || k==='N'){ nextQ(); }
+    if(k==='ArrowRight'){ nextQ(); }
+    if(k==='ArrowLeft'){ prevQ(); }
+    if(k==='a' || k==='A'){ toggleAnswer(); }
+    if(k==='b' || k==='B'){
+      state.questions = sampleQuestions(); state.qIndex=0; save(); renderBank(); loadQuestion(0); ensureOverlay(true);
     }
-    if(k==='b'){
-      state.questions = sampleQuestions(); state.qIndex=0; save(); renderBank(); loadQuestion(0); ensureOverlay();
-    }
-    if(k==='q') toggleOverlay();
-    if(k==='f') toggleFullscreen();
-    if(k==='z') undo();
+    if(k==='q' || k==='Q') toggleOverlay();
+    if(k==='f' || k==='F') toggleFullscreen();
+    if(k==='z' || k==='Z') undo();
   });
   if(els.loadSample){ els.loadSample.addEventListener('click', ()=>{ if(confirm('Replace current bank with 10 BEGINNER questions (SELECT + WHERE only)?')){ state.questions = sampleQuestions(); state.qIndex=0; save(); renderBank(); loadQuestion(0); }}); }
   if(els.clearBank){ els.clearBank.addEventListener('click', ()=>{ if(confirm('Clear all saved questions?')){ state.questions = []; state.qIndex = -1; save(); renderBank(); clearForm(); }}); }
 
-  function ensureOverlay(){
+  function ensureOverlay(keepOpen){
     // prepare content then show overlay
     let title = els.qTitle.value || 'Round';
     let text = els.qText.value || 'Question will appear here…';
     let imgSrc = (els.qPreview && els.qPreview.style.display!=='none') ? els.qPreview.src : '';
+    let ans = '';
     if(state.qIndex>=0 && state.questions[state.qIndex]){
       const q = state.questions[state.qIndex];
-      title = q.title || title; text = q.text || text; imgSrc = q.image || imgSrc;
+      title = q.title || title; text = q.text || text; imgSrc = q.image || imgSrc; ans = q.answer || '';
     }
     els.overlayTitle.textContent = title;
     els.overlayBody.textContent = text;
+    els.overlayAnswer.textContent = ans ? `Answer: ${ans}` : '';
+    els.overlayAnswer.style.display = 'none';
     if(imgSrc){ els.overlayImg.src = imgSrc; els.overlayImg.style.display='block'; }
     else { els.overlayImg.style.display='none'; }
-    els.overlay.classList.add('show');
+    // Branding visibility for overlay
+    els.overlayBrand.style.display = state.brand.showOnOverlay ? 'flex' : 'none';
+    els.overlayCredit.style.display = state.brand.showOnOverlay ? 'block' : 'none';
+    if(!keepOpen) els.overlay.classList.add('show');
+  }
+
+  function toggleAnswer(){
+    if(!els.overlay.classList.contains('show')) ensureOverlay();
+    if(!els.overlayAnswer.textContent) return;
+    const shown = els.overlayAnswer.style.display !== 'none';
+    els.overlayAnswer.style.display = shown ? 'none' : 'block';
   }
 
   // Overlay toggle (safe)
@@ -819,16 +1016,17 @@ Question: Say the titles that match (max 3).`
       apply(state.teams[0].id, state.step.correct);
       if(state.teams[0].pct === before) throw new Error('pct unchanged');
     });
-    test('Fullscreen/fallback available', ()=>{
-      // trigger and verify either real fullscreen or fallback class toggled
-      const was = !!document.fullscreenElement || document.body.classList.contains('pseudo-fullscreen');
-      toggleFullscreen();
-      const now = !!document.fullscreenElement || document.body.classList.contains('pseudo-fullscreen');
-      if(!now) throw new Error('neither fullscreen nor fallback activated');
-      // restore state if we changed it
-      if(!was) toggleFullscreen();
+    test('Car crosses finish at 100%', ()=>{
+      const id = state.teams[0].id;
+      state.teams[0].pct = 100; render();
+      const lane = document.querySelector(`.lane[data-id="${id}"]`);
+      const car = lane.querySelector('.car');
+      const finishW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--finish-w'))||18;
+      const x = new WebKitCSSMatrix(getComputedStyle(car).transform).m41 || 0;
+      const need = lane.clientWidth - finishW - car.getBoundingClientRect().width * 0.9;
+      if(x < need) throw new Error(`car did not reach finish: x=${x} need>=${need}`);
     });
-  }, 50);
+  }, 120);
 })();
 </script>
 </body>
