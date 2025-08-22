@@ -12,7 +12,7 @@
     --bg:#0b1020; --panel:#151b34; --muted:#64748b; --text:#e5e7eb; --accent:#22d3ee;
   }
   html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b1020,#0e1430);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .app{display:grid;grid-template-rows:auto auto auto 1fr auto;gap:14px;max-width:1200px;margin:0 auto;padding:16px}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto auto;gap:14px;max-width:1200px;margin:0 auto;padding:16px}
   h1{font-size:28px;margin:12px 0 4px}
   .subtitle{color:#9aa4b2;font-size:14px;margin-bottom:6px}
   .panel{background:var(--panel);border:1px solid #1f2647;border-radius:16px;padding:12px}
@@ -20,14 +20,6 @@
   .grid{display:grid;gap:12px}
   .grid.cols-2{grid-template-columns: 1.2fr .8fr}
   .grid.cols-3{grid-template-columns: repeat(3,1fr)}
-
-  /* BRANDING */
-  .brandbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0f1530;border:1px solid #25305c;border-radius:12px;padding:10px 12px}
-  .brand-left{display:flex;align-items:center;gap:10px}
-  #brandLogoImg{height:38px;display:none}
-  .brand-name{font-weight:700;color:#e7ebff}
-  .brand-right{font-size:14px;color:#a8b5e0}
-  .brand-right .nm{font-weight:700;color:#e7ebff}
 
   /* Scoreboard */
   .teams{display:grid;grid-template-columns: repeat(4,1fr);gap:10px}
@@ -110,13 +102,6 @@
   body.pseudo-fullscreen .app{max-width:100vw;padding:6px}
   body.pseudo-fullscreen .overlay .card{max-width:96vw}
 
-  /* Overlay branding */
-  .overlay-brand{position:absolute;top:16px;left:16px;display:flex;align-items:center;gap:10px;opacity:.95}
-  .overlay-brand img{height:36px;border-radius:2px;background:#0f1530;padding:2px 4px}
-  .overlay-brand .inst{font-weight:700;color:#e7ebff}
-  .overlay-credit{position:absolute;right:16px;bottom:16px;color:#a8b5e0;background:#0f1530;border:1px solid #2a386d;border-radius:10px;padding:6px 10px}
-  .overlay-credit .nm{color:#e7ebff;font-weight:700}
-
   /* Overlay controls */
   .overlay-controls{display:flex;gap:10px;justify-content:center;margin-top:14px}
   .overlay-answer{margin-top:10px;font-size:28px;color:#86efac;background:#0f2a19;border:1px solid #245d3f;border-radius:12px;padding:10px 14px;display:none}
@@ -132,15 +117,6 @@
 </head>
 <body>
   <div class="app">
-    <!-- Brand Bar -->
-    <div class="brandbar">
-      <div class="brand-left">
-        <img id="brandLogoImg" alt="Institution logo" />
-        <div class="brand-name" id="brandInstitutionText">Institution</div>
-      </div>
-      <div class="brand-right">Created by <span class="nm" id="brandInstructorText">Instructor</span></div>
-    </div>
-
     <header>
       <h1>SQL Grand Prix <span class="subtitle">— Inter‑Campus Race</span></h1>
       <div class="subtitle">Use the buttons to award/penalise teams as students answer SQL questions. Press <span class="kbd">F</span> for fullscreen, <span class="kbd">Q</span> to show/hide the Big Question screen, <span class="kbd">Z</span> to Undo.</div>
@@ -173,34 +149,6 @@
         <button id="undo" class="ghost small">Undo (Z)</button>
         <button id="reset" class="danger small">Reset Race</button>
         <button id="save" class="ghost small">Save</button>
-      </div>
-    </section>
-
-    <!-- Branding Settings -->
-    <section class="panel">
-      <h2>Branding</h2>
-      <div class="grid cols-3">
-        <div>
-          <div class="label">Institution name</div>
-          <input id="brandInstitution" type="text" placeholder="e.g., Yoobee College of Creative Innovation" style="width:100%" />
-        </div>
-        <div>
-          <div class="label">Instructor name</div>
-          <input id="brandInstructor" type="text" placeholder="Your name" style="width:100%" />
-        </div>
-        <div>
-          <div class="label">Show on Big Question overlay</div>
-          <label class="small"><input id="brandShowOverlay" type="checkbox" checked /> Show branding on overlay</label>
-        </div>
-      </div>
-      <div class="foot" style="margin-top:10px">
-        <div>
-          <div class="label">Logo file</div>
-          <input id="brandLogo" type="file" accept="image/*" />
-        </div>
-        <div class="spacer"></div>
-        <div class="label">Preview</div>
-        <img id="brandLogoPreview" alt="Logo preview" style="height:40px;display:none;border-radius:2px;background:#0f1530;padding:2px 4px;border:1px solid #2a386d"/>
       </div>
     </section>
 
@@ -260,11 +208,6 @@
       </div>
       <div id="overlayAnswer" class="overlay-answer"></div>
     </div>
-    <div class="overlay-brand" id="overlayBrand" style="display:none">
-      <img id="overlayBrandImg" alt="logo"/>
-      <span class="inst" id="overlayBrandText"></span>
-    </div>
-    <div class="overlay-credit" id="overlayCredit" style="display:none">Created by <span class="nm" id="overlayCreditName"></span></div>
   </div>
 
   <div class="overlay" id="winner">
@@ -290,13 +233,7 @@
     ],
     history:[],
     questions:[],
-    qIndex:-1,
-    brand:{
-      institution:'Yoobee College of Creative Innovation',
-      instructor:'',
-      showOnOverlay:true,
-      logo:''
-    }
+    qIndex:-1
   };
 
   const els = {
@@ -336,20 +273,6 @@
     overlayImg: document.getElementById('overlayImg'),
     loadSample: document.getElementById('loadSample'),
     clearBank: document.getElementById('clearBank'),
-    // branding
-    brandInstitution: document.getElementById('brandInstitution'),
-    brandInstructor: document.getElementById('brandInstructor'),
-    brandShowOverlay: document.getElementById('brandShowOverlay'),
-    brandLogo: document.getElementById('brandLogo'),
-    brandLogoPreview: document.getElementById('brandLogoPreview'),
-    brandLogoImg: document.getElementById('brandLogoImg'),
-    brandInstitutionText: document.getElementById('brandInstitutionText'),
-    brandInstructorText: document.getElementById('brandInstructorText'),
-    overlayBrand: document.getElementById('overlayBrand'),
-    overlayBrandImg: document.getElementById('overlayBrandImg'),
-    overlayBrandText: document.getElementById('overlayBrandText'),
-    overlayCredit: document.getElementById('overlayCredit'),
-    overlayCreditName: document.getElementById('overlayCreditName'),
     // overlay controls
     olPrev: document.getElementById('olPrev'),
     olNext: document.getElementById('olNext'),
@@ -367,41 +290,11 @@
       if(Array.isArray(data.teams)){state.teams=data.teams}
       if(Array.isArray(data.questions)){state.questions=data.questions}
       if(typeof data.qIndex === 'number'){state.qIndex=data.qIndex}
-      if(data.brand){ state.brand = Object.assign(state.brand, data.brand); }
     }catch(e){}
   }
 
   // If empty, preload sample SELECT questions (with answers)
   if(state.questions.length===0){ state.questions = sampleQuestions(); state.qIndex=0; save(); }
-
-  function renderBrand(){
-    // header bar
-    els.brandInstitutionText.textContent = state.brand.institution || 'Institution';
-    els.brandInstructorText.textContent = state.brand.instructor || 'Instructor';
-    if(state.brand.logo){
-      els.brandLogoImg.src = state.brand.logo;
-      els.brandLogoImg.style.display = 'block';
-      els.brandLogoPreview.src = state.brand.logo;
-      els.brandLogoPreview.style.display = 'block';
-    }else{
-      els.brandLogoImg.removeAttribute('src');
-      els.brandLogoImg.style.display = 'none';
-      els.brandLogoPreview.removeAttribute('src');
-      els.brandLogoPreview.style.display = 'none';
-    }
-    // overlay
-    const show = !!state.brand.showOnOverlay;
-    els.overlayBrand.style.display = show? 'flex' : 'none';
-    els.overlayCredit.style.display = show? 'block' : 'none';
-    els.overlayBrandText.textContent = state.brand.institution || '';
-    els.overlayCreditName.textContent = state.brand.instructor || '';
-    if(state.brand.logo){ els.overlayBrandImg.src = state.brand.logo; } else { els.overlayBrandImg.removeAttribute('src'); }
-
-    // bind inputs if present
-    if(els.brandInstitution && els.brandInstitution.value !== state.brand.institution) els.brandInstitution.value = state.brand.institution;
-    if(els.brandInstructor && els.brandInstructor.value !== state.brand.instructor) els.brandInstructor.value = state.brand.instructor;
-    if(els.brandShowOverlay) els.brandShowOverlay.checked = !!state.brand.showOnOverlay;
-  }
 
   // Render Scoreboard & Track
   function render(){
@@ -453,7 +346,6 @@
       </div>`
     }).join('');
     renderBank();
-    renderBrand();
     positionCars();
   }
 
@@ -530,8 +422,7 @@
       step:state.step,
       teams:state.teams,
       questions:state.questions,
-      qIndex:state.qIndex,
-      brand:state.brand
+      qIndex:state.qIndex
     }));
   }
 
@@ -843,19 +734,6 @@ Question: Say the titles that match (max 3).`,
   if(els.olNext) els.olNext.addEventListener('click', nextQ);
   if(els.olShowAns) els.olShowAns.addEventListener('click', ()=> toggleAnswer());
 
-  // Branding events
-  if(els.brandInstitution){ els.brandInstitution.addEventListener('input', (e)=>{ state.brand.institution = e.target.value; save(); renderBrand(); }); }
-  if(els.brandInstructor){ els.brandInstructor.addEventListener('input', (e)=>{ state.brand.instructor = e.target.value; save(); renderBrand(); }); }
-  if(els.brandShowOverlay){ els.brandShowOverlay.addEventListener('change', (e)=>{ state.brand.showOnOverlay = !!e.target.checked; save(); renderBrand(); }); }
-  if(els.brandLogo){
-    els.brandLogo.addEventListener('change', (e)=>{
-      const file = e.target.files?.[0]; if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{ state.brand.logo = ev.target.result; save(); renderBrand(); };
-      reader.readAsDataURL(file);
-    });
-  }
-
   // Init render
   render();
   if(typeof renderBank==='function') renderBank();
@@ -927,9 +805,6 @@ Question: Say the titles that match (max 3).`,
     els.overlayAnswer.style.display = 'none';
     if(imgSrc){ els.overlayImg.src = imgSrc; els.overlayImg.style.display='block'; }
     else { els.overlayImg.style.display='none'; }
-    // Branding visibility for overlay
-    els.overlayBrand.style.display = state.brand.showOnOverlay ? 'flex' : 'none';
-    els.overlayCredit.style.display = state.brand.showOnOverlay ? 'block' : 'none';
     if(!keepOpen) els.overlay.classList.add('show');
   }
 
