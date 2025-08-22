@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SQL Grand Prix — Inter‑Campus Race</title>
+<style>
+  :root{
+    --lane-h: 80px;
+    --track-pad: 16px;
+    --finish-w: 18px;
+    --bg:#0b1020; --panel:#151b34; --muted:#64748b; --text:#e5e7eb; --accent:#22d3ee;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b1020,#0e1430);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;gap:14px;max-width:1200px;margin:0 auto;padding:16px}
+  h1{font-size:28px;margin:12px 0 4px}
+  .subtitle{color:#9aa4b2;font-size:14px;margin-bottom:6px}
+  .panel{background:var(--panel);border:1px solid #1f2647;border-radius:16px;padding:12px}
+  .panel h2{margin:0 0 10px;font-size:16px;color:#c9d4f2}
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns: 1.2fr .8fr}
+  .grid.cols-3{grid-template-columns: repeat(3,1fr)}
+
+  /* Scoreboard */
+  .teams{display:grid;grid-template-columns: repeat(4,1fr);gap:10px}
+  .team{background:#0f1530;border:1px solid #25305c;border-radius:12px;padding:10px}
+  .team .t-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 10px;border:1px solid #2a386d;background:#11173a}
+  .dot{width:10px;height:10px;border-radius:999px}
+  .name{font-weight:700}
+  .progress{height:10px;border-radius:999px;overflow:hidden;background:#0e1330;border:1px solid #273268;margin-top:8px}
+  .bar{height:100%}
+  .pct{font-size:12px;color:#a6b2d4}
+
+  /* Track */
+  .track{position:relative;border-radius:16px;background:#0a112b;border:1px solid #24305e;overflow:hidden}
+  .lane{position:relative;height:var(--lane-h);display:flex;align-items:center}
+  .lane:nth-child(odd){background:#0b132f}
+  .lane:nth-child(even){background:#0a1230}
+  .lane + .lane{box-shadow:inset 0 1px 0 0 rgba(255,255,255,.06)}
+  .finish{position:absolute;top:0;right:0;height:100%;width:var(--finish-w);background:
+    repeating-linear-gradient(
+      45deg,
+      #ffffff 0, #ffffff 6px,
+      #11173a 6px, #11173a 12px
+    );
+    box-shadow:inset 1px 0 0 rgba(0,0,0,.5)
+  }
+  .car{position:absolute;left:0;transform:translateX(0%);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .car svg{height:54px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
+  .lane-label{position:absolute;left:8px;top:6px;font-size:12px;color:#9db1ff}
+
+  /* Controls */
+  .controls{display:grid;grid-template-columns: repeat(4,1fr);gap:10px}
+  .t-controls{background:#0f1530;border:1px solid #25305c;border-radius:12px;padding:10px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  button{cursor:pointer;border:1px solid #30407a;background:#121a44;color:#dde6ff;border-radius:10px;padding:8px 10px;font-weight:600}
+  button:hover{filter:brightness(1.1)}
+  button:active{transform:translateY(1px)}
+  .small{font-size:12px;padding:6px 8px}
+  .ghost{background:#0c1230;color:#9fb0ff;border-color:#273268}
+  .danger{background:#2a1433;border-color:#6c245e}
+  .success{background:#13322a;border-color:#2e7a5f}
+  .accent{background:#0c2f3b;border-color:#2aa6b3}
+
+  /* Footer controls */
+  .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spacer{flex:1}
+  input[type="text"], input[type="number"]{background:#0d1538;color:#e7ebff;border:1px solid #2a386d;border-radius:10px;padding:8px 10px}
+  .label{font-size:12px;color:#a8b5e0}
+
+  /* Overlay for big-question & winner */
+  .overlay{position:fixed;inset:0;background:rgba(5,8,20,.96);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .overlay .card{max-width:1400px;margin:24px;background:#0f1530;border:1px solid #2c3768;border-radius:18px;padding:24px;text-align:center}
+  .overlay h3{font-size:56px;margin:0 0 8px}
+  .overlay p{font-size:30px;color:#c9d4f2}
+  #overlayBody{white-space:pre-wrap;text-align:left;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:26px;line-height:1.45}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0a1230;border:1px solid #2a386d;border-radius:8px;padding:2px 6px;font-size:.9em}
+
+  .timer{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px}
+  .timer .clock{font-size:34px;font-weight:800;letter-spacing:1px}
+
+  /* Confetti (tiny, CSS keyframes circles) */
+  .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+  .confetti i{position:absolute;width:8px;height:8px;border-radius:2px;opacity:.9;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
+
+  /* Question media & bank */
+  .q-media{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
+  .q-media input[type="file"]{background:#0d1538;color:#e7ebff;border:1px solid #2a386d;border-radius:10px;padding:8px 10px}
+  .q-preview{flex:1;min-height:80px;background:#0a1230;border:1px solid #2a386d;border-radius:12px;display:flex;align-items:center;justify-content:center;padding:8px}
+  .q-preview img{max-width:100%;max-height:180px;border-radius:10px;display:none}
+  #bankList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+  .bank-item{background:#0f1530;border:1px solid #25305c;border-radius:10px;padding:8px;cursor:pointer}
+  .bank-item.active{outline:2px solid var(--accent);border-color:var(--accent)}
+  .bank-item .title{font-weight:700;font-size:14px}
+  .bank-item .meta{color:#a6b2d4;font-size:12px}
+
+  /* Fallback presentation mode when fullscreen blocked */
+  body.pseudo-fullscreen{overflow:hidden}
+  body.pseudo-fullscreen .app{max-width:100vw;padding:6px}
+  body.pseudo-fullscreen .overlay .card{max-width:96vw}
+
+  @media (max-width: 960px){
+    .grid.cols-2{grid-template-columns: 1fr}
+    .teams{grid-template-columns: repeat(2,1fr)}
+    .controls{grid-template-columns: repeat(2,1fr)}
+    :root{--lane-h: 72px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>SQL Grand Prix <span class="subtitle">— Inter‑Campus Race</span></h1>
+      <div class="subtitle">Use the buttons to award/penalise teams as students answer SQL questions. Press <span class="kbd">F</span> for fullscreen, <span class="kbd">Q</span> to show/hide the Big Question screen, <span class="kbd">Z</span> to Undo.</div>
+    </header>
+
+    <!-- Scoreboard -->
+    <section class="panel">
+      <h2>Scoreboard</h2>
+      <div class="teams" id="teams"></div>
+    </section>
+
+    <!-- Track -->
+    <section class="panel track" id="track">
+      <div class="finish"></div>
+      <!-- Lanes injected here -->
+    </section>
+
+    <!-- Controls -->
+    <section class="panel">
+      <h2>Award Controls</h2>
+      <div class="controls" id="controls"></div>
+      <div class="foot" style="margin-top:12px">
+        <div>
+          <div class="label">Step sizes</div>
+          <label class="small">Correct <input id="stepCorrect" type="number" min="1" max="50" step="1" style="width:70px"> %</label>
+          <label class="small" style="margin-left:10px">Bonus <input id="stepBonus" type="number" min="1" max="80" step="1" style="width:70px"> %</label>
+          <label class="small" style="margin-left:10px">Wrong <input id="stepWrong" type="number" min="-50" max="-1" step="1" style="width:70px"> %</label>
+        </div>
+        <div class="spacer"></div>
+        <button id="undo" class="ghost small">Undo (Z)</button>
+        <button id="reset" class="danger small">Reset Race</button>
+        <button id="save" class="ghost small">Save</button>
+      </div>
+    </section>
+
+    <!-- Big Question + Timer -->
+    <section class="panel grid cols-2">
+      <div class="panel" style="background:#0c1335">
+        <h2>Big Question</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <input id="qTitle" type="text" placeholder="Round title e.g., Find HR names" style="min-width:260px;flex:1" />
+          <button id="toggleOverlay" class="accent">Show on Screen (Q)</button>
+        </div>
+        <textarea id="qText" placeholder="Type the current SQL question here…" style="width:100%;height:120px;margin-top:10px;background:#0d1538;color:#e7ebff;border:1px solid #2a386d;border-radius:10px;padding:10px"></textarea>
+        <div class="q-media">
+          <input id="qImage" type="file" accept="image/*" />
+          <div class="q-preview"><img id="qPreview" alt="Question image preview" /></div>
+        </div>
+        <div class="qbank" style="margin-top:10px">
+          <div class="label">Question Bank (max 10)</div>
+          <div id="bankList"></div>
+          <div class="btnrow" style="margin-top:8px">
+            <button id="saveToBank" class="success">Save / Update</button>
+            <button id="newQuestion" class="ghost">New</button>
+            <button id="deleteQuestion" class="danger">Delete</button>
+            <button id="prevQuestion" class="ghost small">Prev</button>
+            <button id="nextQuestion" class="accent small">Next</button>
+            <button id="showCurrent" class="accent">Show Now (Q)</button>
+            <button id="loadSample" class="ghost small">Load Beginner Pack</button>
+            <button id="clearBank" class="danger small">Clear Bank</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="background:#0c1335">
+        <h2>Round Timer</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <label>Seconds <input id="timerInput" type="number" value="60" min="5" max="999" style="width:80px"></label>
+          <button id="startTimer" class="success">Start</button>
+          <button id="stopTimer" class="ghost">Stop</button>
+          <button id="beep" class="ghost">Beep</button>
+        </div>
+        <div class="timer"><div class="clock" id="clock">01:00</div></div>
+      </div>
+    </section>
+
+    <footer class="subtitle">Tip: Rename teams by clicking their names. Progress persists in your browser (localStorage).</footer>
+  </div>
+
+  <!-- Overlays -->
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <h3 id="overlayTitle">Round</h3>
+      <img id="overlayImg" alt="" style="max-width:100%;max-height:60vh;border-radius:12px;display:none;margin:12px auto 6px;"/>
+      <p id="overlayBody">Question will appear here…</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="winner">
+    <div class="card">
+      <h3 id="winnerText">🏁 Winner!</h3>
+      <p>Reset the race to play again.</p>
+      <button id="closeWinner" class="accent">Close</button>
+    </div>
+  </div>
+
+  <div class="confetti" id="confetti"></div>
+
+<script>
+(function(){
+  const colors = ["#ef4444","#22c55e","#3b82f6","#f59e0b"]; // team colors
+  const state = {
+    step:{correct:8, bonus:15, wrong:-5},
+    teams:[
+      {id:"A1", name:"Auckland 1", color:colors[0], pct:0},
+      {id:"A2", name:"Auckland 2", color:colors[1], pct:0},
+      {id:"A3", name:"Auckland 3", color:colors[2], pct:0},
+      {id:"CHC", name:"Christchurch", color:colors[3], pct:0},
+    ],
+    history:[],
+    questions:[],
+    qIndex:-1,
+  };
+
+  const els = {
+    teams: document.getElementById('teams'),
+    track: document.getElementById('track'),
+    controls: document.getElementById('controls'),
+    stepCorrect: document.getElementById('stepCorrect'),
+    stepBonus: document.getElementById('stepBonus'),
+    stepWrong: document.getElementById('stepWrong'),
+    undo: document.getElementById('undo'),
+    reset: document.getElementById('reset'),
+    save: document.getElementById('save'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlayTitle'),
+    overlayBody: document.getElementById('overlayBody'),
+    toggleOverlay: document.getElementById('toggleOverlay'),
+    winner: document.getElementById('winner'),
+    winnerText: document.getElementById('winnerText'),
+    closeWinner: document.getElementById('closeWinner'),
+    confetti: document.getElementById('confetti'),
+    qTitle: document.getElementById('qTitle'),
+    qText: document.getElementById('qText'),
+    timerInput: document.getElementById('timerInput'),
+    startTimer: document.getElementById('startTimer'),
+    stopTimer: document.getElementById('stopTimer'),
+    clock: document.getElementById('clock'),
+    beep: document.getElementById('beep'),
+    qImage: document.getElementById('qImage'),
+    qPreview: document.getElementById('qPreview'),
+    bankList: document.getElementById('bankList'),
+    saveToBank: document.getElementById('saveToBank'),
+    newQuestion: document.getElementById('newQuestion'),
+    deleteQuestion: document.getElementById('deleteQuestion'),
+    prevQuestion: document.getElementById('prevQuestion'),
+    nextQuestion: document.getElementById('nextQuestion'),
+    showCurrent: document.getElementById('showCurrent'),
+    overlayImg: document.getElementById('overlayImg'),
+    loadSample: document.getElementById('loadSample'),
+    clearBank: document.getElementById('clearBank'),
+  };
+
+  // Persistence
+  const key = 'sql-grand-prix-v1';
+  const saved = localStorage.getItem(key);
+  if(saved){
+    try{
+      const data = JSON.parse(saved);
+      Object.assign(state.step, data.step||{});
+      if(Array.isArray(data.teams)){state.teams=data.teams}
+      if(Array.isArray(data.questions)){state.questions=data.questions}
+      if(typeof data.qIndex === 'number'){state.qIndex=data.qIndex}
+    }catch(e){}
+  }
+
+  // If empty, preload sample SELECT questions
+  if(state.questions.length===0){ state.questions = sampleQuestions(); state.qIndex=0; save(); }
+
+  // Render Scoreboard & Track
+  function render(){
+    // Scoreboard
+    els.teams.innerHTML = state.teams.map((t,i)=>{
+      const pct = Math.max(0, Math.min(100, t.pct));
+      return `<div class="team" data-id="${t.id}">
+        <div class="t-row">
+          <div class="pill"><span class="dot" style="background:${t.color}"></span>
+            <span class="name" contenteditable="true" spellcheck="false" oninput="this.parentElement.parentElement.parentElement.dataset.name=this.innerText">${t.name}</span>
+          </div>
+          <div class="pct">${pct.toFixed(0)}%</div>
+        </div>
+        <div class="progress"><div class="bar" style="width:${pct}%;background:linear-gradient(90deg, ${shade(t.color,0.2)}, ${t.color})"></div></div>
+      </div>`
+    }).join('');
+
+    // Track lanes
+    els.track.querySelectorAll('.lane').forEach(n=>n.remove());
+    state.teams.forEach((t,i)=>{
+      const lane = document.createElement('div');
+      lane.className = 'lane';
+      lane.dataset.id = t.id;
+      const label = document.createElement('div');
+      label.className = 'lane-label';
+      label.textContent = (t.name||t.id);
+      const car = document.createElement('div');
+      car.className = 'car';
+      car.style.transform = `translateX(${t.pct}%)`;
+      car.innerHTML = carSvg(t.color);
+      lane.appendChild(label);
+      lane.appendChild(car);
+      els.track.appendChild(lane);
+    });
+
+    els.stepCorrect.value = state.step.correct;
+    els.stepBonus.value = state.step.bonus;
+    els.stepWrong.value = state.step.wrong;
+
+    // Controls per team
+    els.controls.innerHTML = state.teams.map(t=>{
+      return `<div class="t-controls" data-id="${t.id}">
+        <div class="t-row"><div class="pill"><span class="dot" style="background:${t.color}"></span> <span class="name">${t.name}</span></div></div>
+        <div class="btnrow">
+          <button class="success" data-act="correct">Correct +</button>
+          <button class="accent" data-act="half">Half +½</button>
+          <button class="accent" data-act="bonus">Bonus ++</button>
+          <button class="danger" data-act="wrong">Wrong −</button>
+        </div>
+      </div>`
+    }).join('');
+    renderBank();
+  }
+
+  function carSvg(color){
+    return `<svg viewBox="0 0 140 60" aria-hidden="true">
+      <g>
+        <rect x="8" y="28" width="120" height="20" rx="8" fill="${shade(color, -0.1)}"/>
+        <rect x="18" y="10" width="80" height="24" rx="10" fill="${color}"/>
+        <rect x="96" y="20" width="28" height="14" rx="4" fill="${color}"/>
+        <circle cx="38" cy="52" r="8" fill="#111"/>
+        <circle cx="100" cy="52" r="8" fill="#111"/>
+        <circle cx="38" cy="52" r="5" fill="#bbb"/>
+        <circle cx="100" cy="52" r="5" fill="#bbb"/>
+        <rect x="22" y="14" width="32" height="16" rx="4" fill="${shade(color,0.35)}"/>
+      </g>
+    </svg>`
+  }
+
+  function shade(hex, amt){
+    // simple lighten/darken
+    const c = hex.replace('#','');
+    const num = parseInt(c,16);
+    let r=(num>>16)+Math.round(255*amt), g=(num>>8 & 0x00FF)+Math.round(255*amt), b=(num & 0x0000FF)+Math.round(255*amt);
+    r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
+    return `#${(r<<16|g<<8|b).toString(16).padStart(6,'0')}`
+  }
+
+  function pushHistory(){
+    state.history.push(JSON.stringify({teams: state.teams.map(t=>({...t}))}));
+    if(state.history.length>200) state.history.shift();
+  }
+
+  function apply(teamId, delta){
+    pushHistory();
+    state.teams = state.teams.map(t=> t.id===teamId ? {...t, pct: clamp(t.pct + delta, 0, 100)} : t);
+    save();
+    render();
+    checkWinner();
+  }
+
+  function clamp(n,min,max){return Math.max(min,Math.min(max,n))}
+
+  function checkWinner(){
+    const winner = state.teams.find(t=>t.pct>=100);
+    if(winner){
+      showWinner(winner.name || winner.id);
+      burstConfetti();
+    }
+  }
+
+  function burstConfetti(){
+    const box = els.confetti; box.innerHTML='';
+    const colors = ['#f87171','#60a5fa','#34d399','#fbbf24','#a78bfa','#f472b6'];
+    for(let i=0;i<180;i++){
+      const p=document.createElement('i');
+      p.style.left = Math.random()*100+'%';
+      p.style.top = '-10px';
+      p.style.background = colors[Math.random()*colors.length|0];
+      p.style.transform = `translateY(-10vh) rotate(${Math.random()*360}deg)`;
+      p.style.animationDuration = (5+Math.random()*3)+'s';
+      box.appendChild(p);
+    }
+    setTimeout(()=>{box.innerHTML='';}, 9000);
+  }
+
+  function save(){
+    localStorage.setItem(key, JSON.stringify({
+      step:state.step,
+      teams:state.teams,
+      questions:state.questions,
+      qIndex:state.qIndex
+    }));
+  }
+
+  function sampleQuestions(){
+    return [
+      // Very easy (SELECT, WHERE only)
+      {
+        title: "Who’s #1?",
+        text: `Schema: Students(id INT, name TEXT)
+Rows:
+id | name
+1  | Alice
+2  | Bob
+3  | Carol
+
+Query:
+SELECT name
+FROM Students
+WHERE id = 1;
+
+Question: Say the single name returned.`
+      },
+      {
+        title: "HR Duo",
+        text: `Schema: Employees(id INT, name TEXT, dept TEXT)
+Rows:
+id | name | dept
+1  | Ana  | Sales
+2  | Ben  | IT
+3  | Cara | HR
+4  | Dan  | HR
+
+Query:
+SELECT name
+FROM Employees
+WHERE dept = 'HR';
+
+Question: Say the two names (any order).`
+      },
+      {
+        title: "Under $20",
+        text: `Schema: Products(id INT, title TEXT, price NUMERIC)
+Rows:
+id | title           | price
+1  | Charger         | 15.00
+2  | Wireless Mouse  | 25.00
+3  | Pen Set         | 12.00
+4  | Notebook        | 4.00
+
+Query:
+SELECT title
+FROM Products
+WHERE price < 20;
+
+Question: Say the titles under $20 (max 3).`
+      },
+      {
+        title: "Christchurch?",
+        text: `Schema: Customers(id INT, name TEXT, city TEXT)
+Rows:
+id | name   | city
+1  | Alice  | Auckland
+2  | Brian  | Hamilton
+3  | Chloe  | Auckland
+4  | Deepak | Christchurch
+
+Query:
+SELECT name
+FROM Customers
+WHERE city = 'Christchurch';
+
+Question: Say the single name returned.`
+      },
+      {
+        title: "Year 2021",
+        text: `Schema: Movies(id INT, title TEXT, year INT)
+Rows:
+id | title       | year
+1  | Sky High    | 2018
+2  | Aurora      | 2019
+3  | Beacon      | 2021
+4  | Cascade     | 2021
+
+Query:
+SELECT title
+FROM Movies
+WHERE year = 2021;
+
+Question: Say the titles from 2021 (max 2).`
+      },
+      // Medium (still SELECT + WHERE)
+      {
+        title: "IT 90K+",
+        text: `Schema: Employees(id INT, name TEXT, dept TEXT, salary INT)
+Rows:
+id | name | dept | salary
+1  | Ana  | Sales| 70000
+2  | Ben  | IT   | 85000
+3  | Cara | HR   | 60000
+4  | Dan  | IT   | 95000
+5  | Eve  | Sales| 90000
+
+Query:
+SELECT name
+FROM Employees
+WHERE dept = 'IT' AND salary >= 90000;
+
+Question: Say the single name returned.`
+      },
+      {
+        title: "Jan ≤ 100",
+        text: `Schema: Sales(id INT, date TEXT, amount NUMERIC)
+Rows:
+id | date       | amount
+1  | 2025-01-05 | 95.00
+2  | 2025-01-06 | 110.00
+3  | 2025-01-07 | 60.00
+4  | 2025-01-08 | 40.00
+5  | 2025-01-10 | 75.00
+
+Query:
+SELECT date
+FROM Sales
+WHERE date >= '2025-01-05' AND date <= '2025-01-10' AND amount <= 100;
+
+Question: Say the dates that match (max 3).`
+      },
+      // Tricky (but still BEGINNER scope: SELECT + WHERE + AND/OR)
+      {
+        title: "Sales/IT ≥ 80K",
+        text: `Schema: Employees(id INT, name TEXT, dept TEXT, salary INT)
+Rows:
+id | name | dept | salary
+1  | Ana  | Sales| 70000
+2  | Ben  | IT   | 85000
+3  | Cara | HR   | 60000
+4  | Dan  | IT   | 95000
+5  | Eve  | Sales| 90000
+6  | Fox  | Sales| 82000
+
+Query:
+SELECT name
+FROM Employees
+WHERE (dept = 'Sales' OR dept = 'IT') AND salary >= 80000;
+
+Question: Say up to three names that match.`
+      },
+      {
+        title: "IDs 2,5,7",
+        text: `Schema: Students(id INT, name TEXT)
+Rows:
+id | name
+1  | Alice
+2  | Bob
+3  | Carol
+4  | Deepa
+5  | Eric
+6  | Farah
+7  | Gina
+
+Query:
+SELECT name
+FROM Students
+WHERE id = 2 OR id = 5 OR id = 7;
+
+Question: Say the three names (any order).`
+      },
+      {
+        title: "Tech 20+",
+        text: `Schema: Products(id INT, title TEXT, category TEXT, price NUMERIC)
+Rows:
+id | title           | category | price
+1  | Charger         | Tech     | 15.00
+2  | Wireless Mouse  | Tech     | 25.00
+3  | USB-C Cable     | Tech     | 20.00
+4  | SQL Basics      | Books    | 30.00
+
+Query:
+SELECT title
+FROM Products
+WHERE category = 'Tech' AND price >= 20;
+
+Question: Say the titles that match (max 3).`
+      }
+    ];
+  }
+
+  // Question bank logic
+  function renderBank(){
+    if(!els.bankList) return;
+    if(!state.questions.length){
+      els.bankList.innerHTML = '<div class="subtitle">No questions yet. Use "Save / Update" to add.</div>';
+      return;
+    }
+    els.bankList.innerHTML = state.questions.map((q,i)=>{
+      const title = (q.title||'').trim() || `Question ${i+1}`;
+      const meta = [(q.image? '📷' : ''), ((q.text||'').length? '✎' : '')].filter(Boolean).join(' ');
+      return `<div class="bank-item ${i===state.qIndex?'active':''}" data-i="${i}">
+        <div class="title">${title}</div>
+        <div class="meta">${meta}</div>
+      </div>`
+    }).join('');
+  }
+
+  function loadQuestion(i){
+    if(i<0 || i>=state.questions.length) return;
+    state.qIndex = i; save(); renderBank();
+    const q = state.questions[i];
+    els.qTitle.value = q.title || '';
+    els.qText.value = q.text || '';
+    if(q.image){ els.qPreview.src = q.image; els.qPreview.style.display='block'; }
+    else { els.qPreview.removeAttribute('src'); els.qPreview.style.display='none'; }
+  }
+
+  function collectForm(){
+    const title = els.qTitle.value.trim();
+    const text = els.qText.value.trim();
+    const image = (els.qPreview && els.qPreview.style.display!=='none' && els.qPreview.src)? els.qPreview.src : '';
+    return {title, text, image};
+  }
+
+  if(els.bankList){
+    els.bankList.addEventListener('click', (e)=>{
+      const item = e.target.closest('.bank-item'); if(!item) return;
+      const i = parseInt(item.dataset.i,10); loadQuestion(i);
+    });
+  }
+
+  function clearForm(){
+    els.qTitle.value=''; els.qText.value=''; if(els.qPreview){ els.qPreview.removeAttribute('src'); els.qPreview.style.display='none'; }
+    state.qIndex=-1; save(); renderBank();
+  }
+
+  if(els.qImage){
+    els.qImage.addEventListener('change', (e)=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ els.qPreview.src = ev.target.result; els.qPreview.style.display='block'; };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if(els.saveToBank){
+    els.saveToBank.addEventListener('click', ()=>{
+      const q = collectForm();
+      if(!q.title && !q.text && !q.image){ alert('Add a title/text or image first.'); return; }
+      if(state.qIndex>=0){ state.questions[state.qIndex] = q; }
+      else {
+        if(state.questions.length>=10){ alert('Limit of 10 questions reached. Delete one to add more.'); return; }
+        state.questions.push(q); state.qIndex = state.questions.length-1;
+      }
+      save(); renderBank();
+    });
+  }
+
+  if(els.newQuestion){ els.newQuestion.addEventListener('click', clearForm); }
+  if(els.deleteQuestion){
+    els.deleteQuestion.addEventListener('click', ()=>{
+      if(state.qIndex<0) return;
+      state.questions.splice(state.qIndex,1);
+      state.qIndex = Math.min(state.qIndex, state.questions.length-1);
+      save(); renderBank();
+      if(state.qIndex>=0) loadQuestion(state.qIndex); else clearForm();
+    });
+  }
+  if(els.prevQuestion){ els.prevQuestion.addEventListener('click', ()=>{ if(!state.questions.length) return; const i = (state.qIndex>0? state.qIndex-1 : state.questions.length-1); loadQuestion(i); }); }
+  if(els.nextQuestion){ els.nextQuestion.addEventListener('click', ()=>{ if(!state.questions.length) return; const i = (state.qIndex+1) % state.questions.length; loadQuestion(i); }); }
+  if(els.showCurrent){ els.showCurrent.addEventListener('click', ()=>{ ensureOverlay(); }); }
+  if(els.toggleOverlay){ els.toggleOverlay.addEventListener('click', toggleOverlay); }
+  if(els.overlay){ els.overlay.addEventListener('click', toggleOverlay); }
+
+  // Init render
+  render();
+  if(typeof renderBank==='function') renderBank();
+  if(state.qIndex>=0) loadQuestion(state.qIndex);
+
+  // Interactions
+  els.controls.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button'); if(!btn) return;
+    const wrap = btn.closest('.t-controls');
+    const id = wrap?.dataset.id; if(!id) return;
+    const act = btn.dataset.act;
+    const s=state.step;
+    if(act==='correct') apply(id, s.correct);
+    if(act==='half') apply(id, Math.max(1, Math.round(s.correct/2)));
+    if(act==='bonus') apply(id, s.bonus);
+    if(act==='wrong') apply(id, s.wrong);
+  });
+
+  els.stepCorrect.addEventListener('input', e=>{state.step.correct=parseInt(e.target.value||'8',10);save()});
+  els.stepBonus.addEventListener('input', e=>{state.step.bonus=parseInt(e.target.value||'15',10);save()});
+  els.stepWrong.addEventListener('input', e=>{state.step.wrong=parseInt(e.target.value||'-5',10);save()});
+
+  els.undo.addEventListener('click', undo);
+  function undo(){
+    const last = state.history.pop();
+    if(!last) return;
+    const snap = JSON.parse(last);
+    state.teams = snap.teams; save(); render();
+  }
+  document.addEventListener('keydown', (e)=>{
+    const k = e.key.toLowerCase();
+    if(k==='n'){
+      if(state.questions.length){ const i = (state.qIndex+1) % state.questions.length; loadQuestion(i); }
+      ensureOverlay();
+    }
+    if(k==='b'){
+      state.questions = sampleQuestions(); state.qIndex=0; save(); renderBank(); loadQuestion(0); ensureOverlay();
+    }
+    if(k==='q') toggleOverlay();
+    if(k==='f') toggleFullscreen();
+    if(k==='z') undo();
+  });
+  if(els.loadSample){ els.loadSample.addEventListener('click', ()=>{ if(confirm('Replace current bank with 10 BEGINNER questions (SELECT + WHERE only)?')){ state.questions = sampleQuestions(); state.qIndex=0; save(); renderBank(); loadQuestion(0); }}); }
+  if(els.clearBank){ els.clearBank.addEventListener('click', ()=>{ if(confirm('Clear all saved questions?')){ state.questions = []; state.qIndex = -1; save(); renderBank(); clearForm(); }}); }
+
+  function ensureOverlay(){
+    // prepare content then show overlay
+    let title = els.qTitle.value || 'Round';
+    let text = els.qText.value || 'Question will appear here…';
+    let imgSrc = (els.qPreview && els.qPreview.style.display!=='none') ? els.qPreview.src : '';
+    if(state.qIndex>=0 && state.questions[state.qIndex]){
+      const q = state.questions[state.qIndex];
+      title = q.title || title; text = q.text || text; imgSrc = q.image || imgSrc;
+    }
+    els.overlayTitle.textContent = title;
+    els.overlayBody.textContent = text;
+    if(imgSrc){ els.overlayImg.src = imgSrc; els.overlayImg.style.display='block'; }
+    else { els.overlayImg.style.display='none'; }
+    els.overlay.classList.add('show');
+  }
+
+  // Overlay toggle (safe)
+  function toggleOverlay(){
+    if(els.overlay.classList.contains('show')){ els.overlay.classList.remove('show'); return; }
+    ensureOverlay();
+  }
+
+  // Timer
+  let timer=null, remain=60;
+  function fmt(n){ const m=Math.floor(n/60), s=n%60; return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` }
+  function tick(){ remain--; els.clock.textContent = fmt(remain); if(remain<=0){ stopTimer(); ping(); }
+    else timer = setTimeout(tick, 1000); }
+  function startTimer(){ stopTimer(); remain = Math.max(1, parseInt(els.timerInput.value||'60',10)); els.clock.textContent = fmt(remain); timer = setTimeout(tick,1000); }
+  function stopTimer(){ if(timer){ clearTimeout(timer); timer=null; } }
+  els.startTimer.addEventListener('click', startTimer);
+  els.stopTimer.addEventListener('click', stopTimer);
+
+  // Simple beep
+  function ping(){
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.01);
+    o.start(); setTimeout(()=>{o.stop();ctx.close()}, 500);
+  }
+  els.beep.addEventListener('click', ping);
+
+  // Fullscreen for clean presenting (safe with fallback)
+  function toggleFullscreen(){
+    const enableFallback = ()=>{
+      document.body.classList.toggle('pseudo-fullscreen');
+      const on = document.body.classList.contains('pseudo-fullscreen');
+      flash(on? 'Presentation mode (fullscreen fallback on)' : 'Presentation mode off');
+    };
+
+    try{
+      const el = document.documentElement;
+      if(document.fullscreenElement){
+        document.exitFullscreen?.();
+        return;
+      }
+      if(document.fullscreenEnabled && el.requestFullscreen){
+        const p = el.requestFullscreen();
+        if(p && typeof p.catch === 'function') p.catch(enableFallback);
+        return;
+      }
+      // Not enabled or not available
+      enableFallback();
+    }catch(err){
+      // Permissions Policy likely blocks it — use fallback mode
+      enableFallback();
+      console.warn('Fullscreen unavailable, using fallback presentation mode.', err);
+    }
+  }
+
+  // Tiny flash message
+  function flash(msg){
+    const n = document.createElement('div');
+    n.textContent = msg; n.style.position='fixed'; n.style.bottom='16px'; n.style.left='50%'; n.style.transform='translateX(-50%)';
+    n.style.background='#0f1530'; n.style.border='1px solid #2a386d'; n.style.padding='8px 12px'; n.style.borderRadius='10px'; n.style.color='#c9d4f2'; n.style.zIndex='99';
+    document.body.appendChild(n); setTimeout(()=>n.remove(), 1400);
+  }
+
+  // -----------------
+  // Minimal runtime tests (console)
+  // -----------------
+  function test(name, fn){
+    try{ fn(); console.log('%cPASS','color:#16a34a;font-weight:bold', name); }
+    catch(e){ console.error('%cFAIL','color:#dc2626;font-weight:bold', name, e); }
+  }
+  // Run tests after initial render
+  setTimeout(()=>{
+    test('Lanes render == teams', ()=>{
+      const lanes = document.querySelectorAll('.lane').length;
+      if(lanes !== state.teams.length) throw new Error(`lanes=${lanes} teams=${state.teams.length}`);
+    });
+    test('Overlay show/hide', ()=>{
+      ensureOverlay();
+      if(!els.overlay.classList.contains('show')) throw new Error('overlay not shown');
+      toggleOverlay();
+      if(els.overlay.classList.contains('show')) throw new Error('overlay not hidden');
+    });
+    test('Award applies', ()=>{
+      const before = state.teams[0].pct;
+      apply(state.teams[0].id, state.step.correct);
+      if(state.teams[0].pct === before) throw new Error('pct unchanged');
+    });
+    test('Fullscreen/fallback available', ()=>{
+      // trigger and verify either real fullscreen or fallback class toggled
+      const was = !!document.fullscreenElement || document.body.classList.contains('pseudo-fullscreen');
+      toggleFullscreen();
+      const now = !!document.fullscreenElement || document.body.classList.contains('pseudo-fullscreen');
+      if(!now) throw new Error('neither fullscreen nor fallback activated');
+      // restore state if we changed it
+      if(!was) toggleFullscreen();
+    });
+  }, 50);
+})();
+</script>
+</body>
+</html>
