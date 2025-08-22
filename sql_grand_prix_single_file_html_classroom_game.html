@@ -879,11 +879,21 @@ Question: Say the titles that match (max 3).`,
   els.stepWrong.addEventListener('input', e=>{state.step.wrong=parseInt(e.target.value||'-5',10);save()});
 
   els.undo.addEventListener('click', undo);
+  els.reset.addEventListener('click', resetRace);
   function undo(){
     const last = state.history.pop();
     if(!last) return;
     const snap = JSON.parse(last);
     state.teams = snap.teams; save(); render();
+  }
+  function resetRace(){
+    if(!confirm('Reset all scores?')) return;
+    state.history = [];
+    state.teams = state.teams.map(t=>({...t, pct:0}));
+    save();
+    render();
+    if(els.winner) els.winner.classList.remove('show');
+    if(els.confetti) els.confetti.innerHTML='';
   }
   document.addEventListener('keydown', (e)=>{
     const k = e.key;
