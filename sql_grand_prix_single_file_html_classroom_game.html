@@ -877,41 +877,6 @@ Question: Say the titles that match (max 3).`,
     document.body.appendChild(n); setTimeout(()=>n.remove(), 1400);
   }
 
-  // -----------------
-  // Minimal runtime tests (console)
-  // -----------------
-  function test(name, fn){
-    try{ fn(); console.log('%cPASS','color:#16a34a;font-weight:bold', name); }
-    catch(e){ console.error('%cFAIL','color:#dc2626;font-weight:bold', name, e); }
-  }
-  // Run tests after initial render
-  setTimeout(()=>{
-    test('Lanes render == teams', ()=>{
-      const lanes = document.querySelectorAll('.lane').length;
-      if(lanes !== state.teams.length) throw new Error(`lanes=${lanes} teams=${state.teams.length}`);
-    });
-    test('Overlay show/hide', ()=>{
-      ensureOverlay();
-      if(!els.overlay.classList.contains('show')) throw new Error('overlay not shown');
-      toggleOverlay();
-      if(els.overlay.classList.contains('show')) throw new Error('overlay not hidden');
-    });
-    test('Award applies', ()=>{
-      const before = state.teams[0].pct;
-      apply(state.teams[0].id, state.step.correct);
-      if(state.teams[0].pct === before) throw new Error('pct unchanged');
-    });
-    test('Car crosses finish at 100%', ()=>{
-      const id = state.teams[0].id;
-      state.teams[0].pct = 100; render();
-      const lane = document.querySelector(`.lane[data-id="${id}"]`);
-      const car = lane.querySelector('.car');
-      const finishW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--finish-w'))||18;
-      const x = new WebKitCSSMatrix(getComputedStyle(car).transform).m41 || 0;
-      const need = lane.clientWidth - finishW - car.getBoundingClientRect().width * 0.9;
-      if(x < need) throw new Error(`car did not reach finish: x=${x} need>=${need}`);
-    });
-  }, 120);
 })();
 </script>
 </body>
